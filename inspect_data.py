@@ -61,7 +61,7 @@ def transform_data(df, value_name):
 # 4. Read, filter columns, transform
 MAGHREB_COUNTRIES = ["DZA","MAR","TUN","EGY","LBY"]
 
-def filter_maghreb(df, country_col='Country Name'):
+def filter_maghreb(df, country_col='Country Code'):
     """
     Garde uniquement les lignes correspondant aux pays du Maghreb.
     """
