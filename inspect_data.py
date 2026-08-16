@@ -83,7 +83,6 @@ for name, path in file_paths.items():
     dfs[name] = transform_data(df_filtered, name)
 
     print(f"{name} transformed:")
-    print(dfs[name].head())
     print("-" * 40)
 
 
@@ -100,9 +99,64 @@ df_merged = reduce(
 
 df_merged = df_merged.sort_values(['Country Code', 'Year']).reset_index(drop=True)
 
-print(df_merged.head())
 
 
 # 6. Optional save
-df_merged.to_csv("data/raw/merged_indicators.csv", index=False)
+df_merged.to_csv("data/raw/clean.csv", index=False)
 print(df_merged['Year'].min(), df_merged['Year'].max(),df_merged.shape,df_merged.isna().sum().sum())
+
+
+
+df_merged['inflation_next'] = df_merged.groupby('Country Code')['inflation'].shift(-1)
+df_merged.to_csv("data/raw/clean.csv")
+
+predict = df_merged[df_merged['inflation_next'].isna()]
+predict.to_csv("data/raw/predict.csv", index=False)
+
+print(predict.shape)
+data = df_merged[df_merged['inflation_next'].notna()]
+data.to_csv("data/raw/train.csv", index=False)
+
+print(data.shape)
+print(data['inflation_next'].isna().sum())
+print(predict['Year'].unique())
+
+train = data[(data['Year'] >= 1991) & (data['Year'] <= 2016)]
+test = data[(data['Year'] >= 2017) & (data['Year'] <= 2020)]
+
+mae = (test['inflation_next'] - test['inflation']).abs().mean()
+print(f"MAE: {mae}")
+X_train = train.drop(columns=['inflation_next', 'Country Name', 'Year', 'Country Code'])
+y_train = train['inflation_next']
+X_test = test.drop(columns=['inflation_next', 'Country Name', 'Year', 'Country Code'])
+y_test = test['inflation_next']
+
+print(X_train.shape)
+
+from sklearn.linear_model import LinearRegression
+
+model = LinearRegression()
+model.fit(X_train, y_train)       # ① apprend les coefficients — UNIQUEMENT sur train
+preds = model.predict(X_test)     # ② prédit sur des lignes jamais vues (2017–2020)
+
+print((preds - y_test).__abs__().mean())  # ③ compare les prédictions aux vraies valeurs
+
+"""
+
+data_encoded = pd.get_dummies(data, columns=['Country Code'])
+
+
+train = data_encoded[(data_encoded['Year'] >= 1991) & (data_encoded['Year'] <= 2016)]
+test = data_encoded[(data_encoded['Year'] >= 2017) & (data_encoded['Year'] <= 2020)]  
+
+X_train = train.drop(columns=['inflation_next', "Country Name"])
+y_train = train['inflation_next']
+X_test = test.drop(columns=['inflation_next', "Country Name" ])
+y_test = test['inflation_next']
+
+model = LinearRegression()
+model.fit(X_train, y_train)       # ① apprend les coefficients — UNIQUEMENT sur train
+preds = model.predict(X_test)     # ② prédit sur des lignes jamais vues (2017–2020)
+
+print((preds - y_test).__abs__().mean())  # ③ compare les prédictions aux vraies valeurs
+"""
