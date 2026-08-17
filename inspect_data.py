@@ -1,3 +1,4 @@
+import joblib
 import pandas as pd
 from functools import reduce
 
@@ -134,6 +135,7 @@ y_test = test['inflation_next']
 print(X_train.shape)
 
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
 
 model = LinearRegression()
 model.fit(X_train, y_train)       # ① apprend les coefficients — UNIQUEMENT sur train
@@ -141,11 +143,16 @@ preds = model.predict(X_test)     # ② prédit sur des lignes jamais vues (2017
 
 print((preds - y_test).__abs__().mean())  # ③ compare les prédictions aux vraies valeurs
 
+print("Ridge Regression")
+ridge = Ridge(alpha=0.5)  # ① apprend les coefficients — UNIQUEMENT sur train
+ridge.fit(X_train, y_train) 
+preds_ridge = ridge.predict(X_test)
+print((preds_ridge - y_test).__abs__().mean())  # ③
 """
 
 data_encoded = pd.get_dummies(data, columns=['Country Code'])
 
-
+mo
 train = data_encoded[(data_encoded['Year'] >= 1991) & (data_encoded['Year'] <= 2016)]
 test = data_encoded[(data_encoded['Year'] >= 2017) & (data_encoded['Year'] <= 2020)]  
 
@@ -160,3 +167,14 @@ preds = model.predict(X_test)     # ② prédit sur des lignes jamais vues (2017
 
 print((preds - y_test).__abs__().mean())  # ③ compare les prédictions aux vraies valeurs
 """
+
+poids = ({"model": model, "features": X_train.columns.tolist()})
+
+joblib.dump(poids, "model.joblib")
+
+saved = joblib.load("model.joblib")
+print(saved["features"])
+print(type(saved["model"]))
+
+preds = saved["model"].predict(X_test[saved["features"]])
+print((y_test - preds).__abs__().mean())
